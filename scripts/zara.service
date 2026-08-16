@@ -1,0 +1,19 @@
+[Unit]
+Description=Project Zara — Landslide Early Warning System
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/project_zara/backend
+Environment=ZARA_MODE=live
+ExecStart=/home/pi/project_zara/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

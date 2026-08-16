@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Project Zara — Smart IoT-Based Landslide Early Warning System for Leon, Iloilo. Real-time monitoring dashboard.">
+    <title>Project Zara — Landslide Early Warning System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- ================================================================= -->
+    <!-- ALERT BANNER (Slides down when WARNING/DANGER) -->
+    <!-- ================================================================= -->
+    <div id="alert-banner" class="alert-banner hidden">
+        <div class="alert-banner-content">
+            <span id="alert-banner-icon" class="alert-icon">⚠️</span>
+            <span id="alert-banner-text">System Normal</span>
+            <button id="alert-banner-dismiss" class="alert-dismiss" onclick="dismissAlertBanner()">✕</button>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- HEADER -->
+    <!-- ================================================================= -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 4L4 36H36L20 4Z" fill="url(#grad1)" opacity="0.8"/>
+                        <path d="M20 12L10 32H30L20 12Z" fill="url(#grad2)"/>
+                        <circle cx="20" cy="22" r="3" fill="#fff" opacity="0.9"/>
+                        <defs>
+                            <linearGradient id="grad1" x1="4" y1="4" x2="36" y2="36">
+                                <stop offset="0%" stop-color="#10b981"/>
+                                <stop offset="100%" stop-color="#059669"/>
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="10" y1="12" x2="30" y2="32">
+                                <stop offset="0%" stop-color="#34d399"/>
+                                <stop offset="100%" stop-color="#10b981"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>Project Zara</h1>
+                    <p class="subtitle">Landslide Early Warning System — Leon, Iloilo</p>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="header-status">
+                <div class="status-item">
+                    <span class="status-dot" id="connection-dot"></span>
+                    <span id="connection-status">Connecting...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Mode:</span>
+                    <span id="system-mode" class="mode-badge">—</span>
+                </div>
+            </div>
+            <div class="header-time">
+                <span id="current-time" class="time-display">--:--:--</span>
+                <span id="current-date" class="date-display">--- --, ----</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================================================================= -->
+    <!-- MAIN CONTENT -->
+    <!-- ================================================================= -->
+    <main class="main-content">
+
+        <!-- ============================================================= -->
+        <!-- RISK LEVEL HERO SECTION -->
+        <!-- ============================================================= -->
+        <section class="risk-hero" id="risk-hero">
+            <div class="risk-gauge-container">
+                <div class="risk-gauge" id="risk-gauge">
+                    <svg viewBox="0 0 200 120" class="gauge-svg">
+                        <!-- Background arc -->
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" 
+                              fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" 
+                              stroke-linecap="round"/>
+                        <!-- Colored arc (animated) -->
+                        <path id="gauge-arc" 
+                              d="M 20 100 A 80 80 0 0 1 180 100" 
+                              fill="none" stroke="#10b981" stroke-width="16" 
+                              stroke-linecap="round"
+                              stroke-dasharray="251.2"
+                              stroke-dashoffset="251.2"/>
+                    </svg>
+                    <div class="gauge-center">
+                        <span class="gauge-value" id="risk-score">--</span>
+                        <span class="gauge-unit">%</span>
+                    </div>
+                </div>
+                <div class="risk-label-container">
+                    <span class="risk-label" id="risk-level">INITIALIZING</span>
+                    <span class="risk-sublabel" id="risk-sublabel">Waiting for sensor data...</span>
+                </div>
+            </div>
+
+            <!-- Rainfall summary cards -->
+            <div class="rainfall-summary">
+                <div class="rain-card" id="rain-1hr">
+                    <span class="rain-value">--</span>
+                    <span class="rain-label">1hr Rain</span>
+                    <span class="rain-unit">mm</span>
+                </div>
+                <div class="rain-card" id="rain-3hr">
+                    <span class="rain-value">--</span>
+                    <span class="rain-label">3hr Rain</span>
+                    <span class="rain-unit">mm</span>
+                </div>
+                <div class="rain-card" id="rain-24hr">
+                    <span class="rain-value">--</span>
+                    <span class="rain-label">24hr Rain</span>
+                    <span class="rain-unit">mm</span>
+                </div>
+                <div class="rain-card" id="rain-72hr">
+                    <span class="rain-value">--</span>
+                    <span class="rain-label">72hr Rain</span>
+                    <span class="rain-unit">mm</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SENSOR CARDS GRID -->
+        <!-- ============================================================= -->
+        <section class="sensor-grid">
+            <!-- Soil Moisture -->
+            <div class="sensor-card" id="card-soil">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">🌱</span>
+                    <h3>Soil Moisture</h3>
+                </div>
+                <div class="sensor-card-body">
+                    <div class="soil-depth">
+                        <div class="depth-bar-container">
+                            <div class="depth-bar" id="soil-bar-1" style="width: 0%"></div>
+                        </div>
+                        <div class="depth-info">
+                            <span class="depth-label">Shallow (15cm)</span>
+                            <span class="depth-value" id="soil-value-1">--%</span>
+                        </div>
+                    </div>
+                    <div class="soil-depth">
+                        <div class="depth-bar-container">
+                            <div class="depth-bar" id="soil-bar-2" style="width: 0%"></div>
+                        </div>
+                        <div class="depth-info">
+                            <span class="depth-label">Mid (30cm)</span>
+                            <span class="depth-value" id="soil-value-2">--%</span>
+                        </div>
+                    </div>
+                    <div class="soil-depth">
+                        <div class="depth-bar-container">
+                            <div class="depth-bar" id="soil-bar-3" style="width: 0%"></div>
+                        </div>
+                        <div class="depth-info">
+                            <span class="depth-label">Deep (60cm)</span>
+                            <span class="depth-value" id="soil-value-3">--%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="sensor-card" id="card-temperature">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">🌡️</span>
+                    <h3>Temperature</h3>
+                </div>
+                <div class="sensor-card-body sensor-single-value">
+                    <span class="big-value" id="temp-value">--</span>
+                    <span class="big-unit">°C</span>
+                </div>
+            </div>
+
+            <!-- Humidity -->
+            <div class="sensor-card" id="card-humidity">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">💧</span>
+                    <h3>Humidity</h3>
+                </div>
+                <div class="sensor-card-body sensor-single-value">
+                    <span class="big-value" id="humidity-value">--</span>
+                    <span class="big-unit">%</span>
+                </div>
+            </div>
+
+            <!-- Pressure -->
+            <div class="sensor-card" id="card-pressure">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">🔵</span>
+                    <h3>Barometric Pressure</h3>
+                </div>
+                <div class="sensor-card-body sensor-single-value">
+                    <span class="big-value" id="pressure-value">--</span>
+                    <span class="big-unit">hPa</span>
+                </div>
+            </div>
+
+            <!-- Slope Movement / Tilt -->
+            <div class="sensor-card" id="card-tilt">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">📐</span>
+                    <h3>Slope Movement</h3>
+                </div>
+                <div class="sensor-card-body">
+                    <div class="tilt-display">
+                        <div class="tilt-axis">
+                            <span class="tilt-label">Tilt X</span>
+                            <span class="tilt-value" id="tilt-x-value">--°</span>
+                        </div>
+                        <div class="tilt-visual" id="tilt-visual">
+                            <div class="tilt-dot" id="tilt-dot"></div>
+                            <div class="tilt-crosshair-h"></div>
+                            <div class="tilt-crosshair-v"></div>
+                        </div>
+                        <div class="tilt-axis">
+                            <span class="tilt-label">Tilt Y</span>
+                            <span class="tilt-value" id="tilt-y-value">--°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rainfall Current -->
+            <div class="sensor-card" id="card-rainfall">
+                <div class="sensor-card-header">
+                    <span class="sensor-icon">🌧️</span>
+                    <h3>Current Rainfall</h3>
+                </div>
+                <div class="sensor-card-body sensor-single-value">
+                    <span class="big-value" id="rainfall-value">--</span>
+                    <span class="big-unit">mm</span>
+                    <span class="sensor-sublabel">per interval</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- CHARTS SECTION -->
+        <!-- ============================================================= -->
+        <section class="charts-section">
+            <!-- Risk Score Component Breakdown -->
+            <div class="chart-card wide">
+                <div class="chart-header">
+                    <h3>Risk Score Breakdown</h3>
+                    <div class="chart-legend" id="risk-breakdown-legend"></div>
+                </div>
+                <div class="risk-breakdown" id="risk-breakdown">
+                    <div class="breakdown-bar">
+                        <span class="breakdown-label">Rainfall</span>
+                        <div class="breakdown-track">
+                            <div class="breakdown-fill" id="breakdown-rainfall" style="width:0%"></div>
+                        </div>
+                        <span class="breakdown-value" id="breakdown-rainfall-val">0</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <span class="breakdown-label">Soil Moisture</span>
+                        <div class="breakdown-track">
+                            <div class="breakdown-fill" id="breakdown-soil" style="width:0%"></div>
+                        </div>
+                        <span class="breakdown-value" id="breakdown-soil-val">0</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <span class="breakdown-label">Slope Movement</span>
+                        <div class="breakdown-track">
+                            <div class="breakdown-fill" id="breakdown-slope" style="width:0%"></div>
+                        </div>
+                        <span class="breakdown-value" id="breakdown-slope-val">0</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <span class="breakdown-label">Environmental</span>
+                        <div class="breakdown-track">
+                            <div class="breakdown-fill" id="breakdown-env" style="width:0%"></div>
+                        </div>
+                        <span class="breakdown-value" id="breakdown-env-val">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rainfall Time Series Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Rainfall History</h3>
+                    <select id="rainfall-chart-range" class="chart-select">
+                        <option value="1">1 Hour</option>
+                        <option value="3">3 Hours</option>
+                        <option value="24" selected>24 Hours</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="rainfall-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Soil Moisture Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Soil Moisture History</h3>
+                    <select id="soil-chart-range" class="chart-select">
+                        <option value="1">1 Hour</option>
+                        <option value="3">3 Hours</option>
+                        <option value="24" selected>24 Hours</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="soil-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Risk History Chart -->
+            <div class="chart-card wide">
+                <div class="chart-header">
+                    <h3>Risk Level History</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="risk-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- ALERTS TABLE -->
+        <!-- ============================================================= -->
+        <section class="alerts-section">
+            <div class="section-header">
+                <h2>Alert History</h2>
+                <div class="section-actions">
+                    <button id="btn-export-csv" class="btn btn-secondary" onclick="exportCSV()">
+                        📥 Export CSV
+                    </button>
+                </div>
+            </div>
+            <div class="alerts-table-container">
+                <table class="alerts-table" id="alerts-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Level</th>
+                            <th>Score</th>
+                            <th>Message</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alerts-tbody">
+                        <tr class="empty-row">
+                            <td colspan="5">No alerts yet — monitoring active</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- FOOTER -->
+    <!-- ================================================================= -->
+    <footer class="footer">
+        <div class="footer-content">
+            <span>Project Zara v1.0 — Landslide Early Warning System</span>
+            <span>Leon, Iloilo • <span id="footer-readings-count">0</span> readings</span>
+        </div>
+    </footer>
+
+    <!-- ================================================================= -->
+    <!-- NOTIFICATION TOAST -->
+    <!-- ================================================================= -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
