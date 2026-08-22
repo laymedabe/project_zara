@@ -91,21 +91,21 @@ async def lifespan(app: FastAPI):
     # Startup
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     await db.connect()
-    await db.log("INFO", "System", "Project Zara base station starting up")
+    await db.log("INFO", "System", "Project Iraya base station starting up")
 
     # Start LoRa listener in background
     if USE_SIMULATOR:
         from lora_simulator import LoRaSimulator
         receiver = LoRaSimulator()
         print("\n" + "=" * 60)
-        print("  PROJECT ZARA -- SIMULATOR MODE")
+        print("  PROJECT IRAYA -- SIMULATOR MODE")
         print("  Dashboard: http://localhost:8000")
         print("=" * 60 + "\n")
     else:
         from lora_receiver import LoRaReceiver
         receiver = LoRaReceiver()
         print("\n" + "=" * 60)
-        print("  PROJECT ZARA -- LIVE LORA MODE")
+        print("  PROJECT IRAYA -- LIVE LORA MODE")
         print("  Dashboard: http://localhost:8000")
         print("=" * 60 + "\n")
 
@@ -129,7 +129,7 @@ async def lifespan(app: FastAPI):
     await receiver.stop()
     lora_task.cancel()
     alert_manager.cleanup()
-    await db.log("INFO", "System", "Project Zara base station shutting down")
+    await db.log("INFO", "System", "Project Iraya base station shutting down")
     await db.close()
 
 
@@ -137,7 +137,7 @@ async def lifespan(app: FastAPI):
 # FASTAPI APP
 # =============================================================================
 app = FastAPI(
-    title="Project Zara — Landslide Early Warning System",
+    title="Project Iraya — Landslide Early Warning System",
     description="Smart IoT-based landslide early warning for Leon, Iloilo",
     version="1.0.0",
     lifespan=lifespan,

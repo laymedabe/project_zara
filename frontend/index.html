@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Project Zara — Smart IoT-Based Landslide Early Warning System for Leon, Iloilo. Real-time monitoring dashboard.">
-    <title>Project Zara — Landslide Early Warning System</title>
+    <meta name="description" content="Project Iraya — Smart IoT-Based Landslide Early Warning System for Leon, Iloilo. Real-time monitoring dashboard.">
+    <title>Project Iraya — Landslide Early Warning System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -46,12 +46,16 @@
                     </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>Project Zara</h1>
+                    <h1>Project Iraya</h1>
                     <p class="subtitle">Landslide Early Warning System — Leon, Iloilo</p>
                 </div>
             </div>
+            <!-- Hamburger menu for mobile compression -->
+            <button class="mobile-menu-btn" onclick="document.getElementById('header-right').classList.toggle('active')">
+                ☰
+            </button>
         </div>
-        <div class="header-right">
+        <div class="header-right" id="header-right">
             <div class="header-status">
                 <div class="status-item">
                     <span class="status-dot" id="connection-dot"></span>
@@ -363,7 +367,7 @@
     <!-- ================================================================= -->
     <footer class="footer">
         <div class="footer-content">
-            <span>Project Zara v1.0 — Landslide Early Warning System</span>
+            <span>Project Iraya v1.0 — Landslide Early Warning System</span>
             <span>Leon, Iloilo • <span id="footer-readings-count">0</span> readings</span>
         </div>
     </footer>

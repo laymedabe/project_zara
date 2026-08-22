@@ -205,7 +205,8 @@ body {
 }
 
 .logo-text h1 {
-    font-size: 1.25rem;
+    margin: 0;
+    font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     background: linear-gradient(135deg, #10b981, #34d399);
@@ -215,10 +216,27 @@ body {
 }
 
 .logo-text .subtitle {
-    font-size: 0.7rem;
+    margin: 0;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    font-weight: 400;
-    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-left: auto;
+}
+.mobile-menu-btn:hover {
+    background: rgba(255,255,255,0.05);
 }
 
 .header-right {
@@ -985,13 +1003,35 @@ body {
 @media (max-width: 768px) {
     .header {
         flex-direction: column;
-        gap: var(--space-md);
+        align-items: stretch;
+        gap: var(--space-sm);
         padding: var(--space-md);
+    }
+    
+    .header-left {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .mobile-menu-btn {
+        display: block;
     }
 
     .header-right {
+        display: none;
         flex-direction: column;
         gap: var(--space-sm);
+        width: 100%;
+        background: rgba(0,0,0,0.2);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+    }
+    
+    .header-right.active {
+        display: flex;
     }
 
     .main-content {
