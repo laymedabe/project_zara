@@ -94,7 +94,7 @@ function _initSoilChart() {
             labels: [],
             datasets: [
                 {
-                    label: 'Shallow (15cm)',
+                    label: 'Sensor 1 (A0)',
                     data: [],
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -105,21 +105,10 @@ function _initSoilChart() {
                     pointHitRadius: 10,
                 },
                 {
-                    label: 'Mid (30cm)',
+                    label: 'Sensor 2 (A1)',
                     data: [],
                     borderColor: '#f59e0b',
                     backgroundColor: 'rgba(245, 158, 11, 0.05)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHitRadius: 10,
-                },
-                {
-                    label: 'Deep (60cm)',
-                    data: [],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
                     borderWidth: 2,
                     fill: true,
                     tension: 0.4,
@@ -261,16 +250,15 @@ function updateRainfallChart(timestamp, rainfall) {
 }
 
 /**
- * Add a new data point to the soil moisture chart.
+ * Add a new data point to the soil moisture chart (2 sensors).
  */
-function updateSoilChart(timestamp, sm1, sm2, sm3) {
+function updateSoilChart(timestamp, sm1, sm2) {
     if (!soilChart) return;
     const label = formatTime(timestamp);
 
     soilChart.data.labels.push(label);
     soilChart.data.datasets[0].data.push(sm1);
     soilChart.data.datasets[1].data.push(sm2);
-    soilChart.data.datasets[2].data.push(sm3);
 
     if (soilChart.data.labels.length > MAX_CHART_POINTS) {
         soilChart.data.labels.shift();
@@ -315,7 +303,7 @@ async function loadHistoricalCharts(hours = 24) {
         const readings = (readingsData.readings || []).reverse();
         const assessments = (assessmentsData.assessments || []).reverse();
 
-        // Rainfall & Soil charts
+        // Rainfall & Soil charts (2 sensors)
         readings.forEach(r => {
             const label = formatTime(r.timestamp);
             rainfallChart.data.labels.push(label);
@@ -323,7 +311,6 @@ async function loadHistoricalCharts(hours = 24) {
             soilChart.data.labels.push(label);
             soilChart.data.datasets[0].data.push(r.soil_moisture_1 || 0);
             soilChart.data.datasets[1].data.push(r.soil_moisture_2 || 0);
-            soilChart.data.datasets[2].data.push(r.soil_moisture_3 || 0);
         });
 
         // Risk chart

@@ -38,6 +38,11 @@ LORA_SPI_CS = 0                 # CE0 — Pin 24 (GPIO 8)
 LORA_RST_PIN = 25               # Pin 22 (GPIO 25)
 LORA_DIO0_PIN = 4               # Pin 7 (GPIO 4)
 
+# Soil Sensor ADC Calibration (Capacitive v2.0)
+# Measure your sensors: put in air (dry) and water (wet) to get exact values
+SOIL_ADC_DRY = 620              # ADC reading in dry air (high = dry)
+SOIL_ADC_WET = 310              # ADC reading in water (low = wet)
+
 # =============================================================================
 # DATA COLLECTION
 # =============================================================================
@@ -83,14 +88,15 @@ RAINFALL_THRESHOLDS = {
 }
 
 # =============================================================================
-# SOIL MOISTURE THRESHOLDS (%) — Per Depth
+# SOIL MOISTURE THRESHOLDS (%) — Per Sensor
 # Based on typical clay-loam soils in Leon, Iloilo slopes
+# 2 sensors installed: A0 (Sensor 1) and A1 (Sensor 2)
 # =============================================================================
 SOIL_MOISTURE_THRESHOLDS = {
-    "depth_1": {"caution": 60, "warning": 75, "danger": 85},  # Shallow (~15cm)
-    "depth_2": {"caution": 55, "warning": 70, "danger": 82},  # Mid (~30cm)
-    "depth_3": {"caution": 50, "warning": 65, "danger": 80},  # Deep (~60cm)
+    "sensor_1": {"caution": 60, "warning": 75, "danger": 85},  # Sensor 1 (A0)
+    "sensor_2": {"caution": 55, "warning": 70, "danger": 82},  # Sensor 2 (A1)
 }
+NUM_SOIL_SENSORS = 2  # Matches Arduino wiring (A0, A1)
 
 # =============================================================================
 # SLOPE MOVEMENT THRESHOLDS (degrees) — From MPU6050

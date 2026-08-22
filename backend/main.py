@@ -98,14 +98,14 @@ async def lifespan(app: FastAPI):
         from lora_simulator import LoRaSimulator
         receiver = LoRaSimulator()
         print("\n" + "=" * 60)
-        print("  PROJECT ZARA — SIMULATOR MODE")
+        print("  PROJECT ZARA -- SIMULATOR MODE")
         print("  Dashboard: http://localhost:8000")
         print("=" * 60 + "\n")
     else:
         from lora_receiver import LoRaReceiver
         receiver = LoRaReceiver()
         print("\n" + "=" * 60)
-        print("  PROJECT ZARA — LIVE LORA MODE")
+        print("  PROJECT ZARA -- LIVE LORA MODE")
         print("  Dashboard: http://localhost:8000")
         print("=" * 60 + "\n")
 

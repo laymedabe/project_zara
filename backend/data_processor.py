@@ -4,13 +4,15 @@ Project Zara — Data Processor
 Feature extraction and pre-processing for sensor readings.
 Computes cumulative rainfall, soil moisture trends, slope movement rates,
 and derived variables needed by the risk engine.
+
+Updated for 2 soil moisture sensors (matching Arduino wiring: A0, A1).
 """
 
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from database import db
-from config import SENSOR_VALID_RANGES
+from config import SENSOR_VALID_RANGES, NUM_SOIL_SENSORS
 
 
 async def extract_features(reading: dict) -> dict:
@@ -29,15 +31,16 @@ async def extract_features(reading: dict) -> dict:
     features = {}
 
     # --- Current sensor values ---
-    features["soil_moisture_1"] = reading.get("soil_moisture_1", 0)
-    features["soil_moisture_2"] = reading.get("soil_moisture_2", 0)
-    features["soil_moisture_3"] = reading.get("soil_moisture_3", 0)
-    features["tilt_x"] = reading.get("tilt_x", 0)
-    features["tilt_y"] = reading.get("tilt_y", 0)
-    features["temperature"] = reading.get("temperature", 0)
-    features["humidity"] = reading.get("humidity", 0)
-    features["pressure"] = reading.get("pressure", 0)
-    features["rainfall"] = reading.get("rainfall", 0)
+    features["soil_moisture_1"] = reading.get("soil_moisture_1", 0) or 0
+    features["soil_moisture_2"] = reading.get("soil_moisture_2", 0) or 0
+    features["soil_moisture_3"] = reading.get("soil_moisture_3")  # None if not installed
+    features["tilt_x"] = reading.get("tilt_x", 0) or 0
+    features["tilt_y"] = reading.get("tilt_y", 0) or 0
+    features["orientation"] = reading.get("orientation", "Flat")
+    features["temperature"] = reading.get("temperature", 0) or 0
+    features["humidity"] = reading.get("humidity", 0) or 0
+    features["pressure"] = reading.get("pressure", 0) or 0
+    features["rainfall"] = reading.get("rainfall", 0) or 0
 
     # --- Cumulative rainfall ---
     features["rainfall_1hr"] = await db.get_rainfall_sum(hours=1)
@@ -46,30 +49,37 @@ async def extract_features(reading: dict) -> dict:
     features["rainfall_72hr"] = await db.get_rainfall_sum(hours=72)
 
     # Add current reading to cumulative (it may not be in DB yet)
-    current_rain = reading.get("rainfall", 0)
+    current_rain = reading.get("rainfall", 0) or 0
     features["rainfall_1hr"] += current_rain
     features["rainfall_3hr"] += current_rain
     features["rainfall_24hr"] += current_rain
     features["rainfall_72hr"] += current_rain
 
     # --- Rainfall intensity (mm/hr based on current interval) ---
+    # Arduino sends every 2 seconds, so multiply accordingly
     features["rainfall_intensity"] = current_rain * 12  # Assuming 5-min intervals
 
-    # --- Soil moisture average and trend ---
-    sm_avg = (features["soil_moisture_1"] +
-              features["soil_moisture_2"] +
-              features["soil_moisture_3"]) / 3.0
+    # --- Soil moisture average and trend (2 sensors) ---
+    active_sensors = [features["soil_moisture_1"], features["soil_moisture_2"]]
+    # Include sensor 3 only if installed
+    if features["soil_moisture_3"] is not None:
+        active_sensors.append(features["soil_moisture_3"])
+
+    sm_avg = sum(active_sensors) / len(active_sensors)
     features["soil_moisture_avg"] = sm_avg
+    features["num_soil_sensors"] = len(active_sensors)
 
     # Compute soil moisture trend (compare with readings from 1 hour ago)
     past_readings = await db.get_readings(hours=1, limit=12)
     if len(past_readings) >= 2:
         oldest = past_readings[-1]
-        oldest_avg = (
-            (oldest.get("soil_moisture_1", 0) or 0) +
-            (oldest.get("soil_moisture_2", 0) or 0) +
-            (oldest.get("soil_moisture_3", 0) or 0)
-        ) / 3.0
+        old_sensors = [
+            (oldest.get("soil_moisture_1", 0) or 0),
+            (oldest.get("soil_moisture_2", 0) or 0),
+        ]
+        if oldest.get("soil_moisture_3") is not None:
+            old_sensors.append(oldest["soil_moisture_3"])
+        oldest_avg = sum(old_sensors) / len(old_sensors) if old_sensors else 0
         features["soil_moisture_trend"] = sm_avg - oldest_avg  # Positive = increasing
     else:
         features["soil_moisture_trend"] = 0.0
@@ -111,9 +121,17 @@ def validate_reading(reading: dict) -> tuple[bool, list[str]]:
     issues = []
 
     for field, (low, high) in SENSOR_VALID_RANGES.items():
-        value = reading.get(field)
-        if value is not None:
-            if not (low <= value <= high):
+        # Check soil_moisture_1 and soil_moisture_2 against soil_moisture range
+        if field == "soil_moisture":
+            for i in range(1, NUM_SOIL_SENSORS + 1):
+                value = reading.get(f"soil_moisture_{i}")
+                if value is not None and not (low <= value <= high):
+                    issues.append(
+                        f"soil_moisture_{i}={value:.2f} out of range [{low}, {high}]"
+                    )
+        else:
+            value = reading.get(field)
+            if value is not None and not (low <= value <= high):
                 issues.append(
                     f"{field}={value:.2f} out of range [{low}, {high}]"
                 )

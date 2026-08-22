@@ -40,10 +40,10 @@ class AlertManager:
                 GPIO.output(pin, GPIO.LOW)
 
             self._gpio_available = True
-            print("[ALERT] GPIO initialized — LED and buzzer alerts enabled")
+            print("[ALERT] GPIO initialized -- LED and buzzer alerts enabled")
         except (ImportError, RuntimeError):
             self._gpio_available = False
-            print("[ALERT] GPIO not available — running in software-only mode")
+            print("[ALERT] GPIO not available -- running in software-only mode")
 
     async def process_risk_assessment(self, assessment: dict):
         """Process a new risk assessment and generate alerts if needed."""

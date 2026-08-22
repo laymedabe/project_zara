@@ -65,16 +65,17 @@ def _score_rainfall(features: dict) -> tuple[float, dict]:
 def _score_soil_moisture(features: dict) -> tuple[float, dict]:
     """
     Score soil moisture danger from 0–100.
-    Uses weighted average across 3 depths (shallow weighted more).
+    Uses weighted average across installed sensors (2 sensors: A0, A1).
     """
     details = {}
-    depth_weights = [0.45, 0.35, 0.20]  # Shallow most important
+    sensor_weights = [0.55, 0.45]  # Sensor 1 weighted slightly more
+    sensor_keys = ["sensor_1", "sensor_2"]
     weighted_score = 0.0
 
-    for i, depth_key in enumerate(["depth_1", "depth_2", "depth_3"]):
+    for i, sensor_key in enumerate(sensor_keys):
         field = f"soil_moisture_{i + 1}"
-        value = features.get(field, 0)
-        thresholds = SOIL_MOISTURE_THRESHOLDS[depth_key]
+        value = features.get(field, 0) or 0
+        thresholds = SOIL_MOISTURE_THRESHOLDS[sensor_key]
 
         if value >= thresholds["danger"]:
             score = 100.0
@@ -91,11 +92,11 @@ def _score_soil_moisture(features: dict) -> tuple[float, dict]:
                 ratio = 0
             score = ratio * 30
 
-        details[depth_key] = {
+        details[sensor_key] = {
             "value_pct": round(value, 1),
             "score": round(score, 1),
         }
-        weighted_score += score * depth_weights[i]
+        weighted_score += score * sensor_weights[i]
 
     # Trend bonus: rapidly increasing moisture is more dangerous
     trend = features.get("soil_moisture_trend", 0)

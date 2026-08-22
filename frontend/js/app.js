@@ -93,8 +93,7 @@ function handleSensorData(data) {
     updateSoilChart(
         new Date().toISOString(),
         data.soil_moisture_1 || 0,
-        data.soil_moisture_2 || 0,
-        data.soil_moisture_3 || 0
+        data.soil_moisture_2 || 0
     );
 
     // Update readings count
@@ -143,13 +142,13 @@ function handleAlert(data) {
  * Update all sensor cards with new reading data.
  */
 function updateSensorCards(data) {
-    // Soil Moisture
-    for (let i = 1; i <= 3; i++) {
+    // Soil Moisture (2 sensors: A0, A1)
+    for (let i = 1; i <= 2; i++) {
         const value = data[`soil_moisture_${i}`];
         const bar = document.getElementById(`soil-bar-${i}`);
         const valueEl = document.getElementById(`soil-value-${i}`);
 
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && bar && valueEl) {
             bar.style.width = `${Math.min(100, value)}%`;
             bar.style.background = getSoilBarGradient(value);
             valueEl.textContent = `${formatNum(value)}%`;

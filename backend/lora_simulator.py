@@ -2,7 +2,8 @@
 Project Zara — LoRa Simulator
 ===============================
 Generates realistic fake sensor data for development and testing
-without LoRa hardware. Simulates various weather/terrain scenarios.
+without LoRa hardware. Mimics the exact data format that the Arduino
+transmitter sends (post-parsing by lora_receiver.py).
 
 Same callback interface as LoRaReceiver — swap seamlessly in main.py.
 """
@@ -25,9 +26,10 @@ class Scenario:
         return {
             "soil_moisture_1": random.uniform(25, 40),
             "soil_moisture_2": random.uniform(20, 35),
-            "soil_moisture_3": random.uniform(15, 30),
+            "soil_moisture_3": None,
             "tilt_x": random.uniform(-0.5, 0.5),
             "tilt_y": random.uniform(-0.3, 0.3),
+            "orientation": "Flat",
             "temperature": random.uniform(26, 32),
             "humidity": random.uniform(55, 70),
             "pressure": random.uniform(1008, 1015),
@@ -40,9 +42,10 @@ class Scenario:
         return {
             "soil_moisture_1": random.uniform(45, 60),
             "soil_moisture_2": random.uniform(40, 55),
-            "soil_moisture_3": random.uniform(35, 48),
+            "soil_moisture_3": None,
             "tilt_x": random.uniform(-1.0, 1.0),
             "tilt_y": random.uniform(-0.8, 0.8),
+            "orientation": "Flat",
             "temperature": random.uniform(23, 27),
             "humidity": random.uniform(75, 85),
             "pressure": random.uniform(1003, 1008),
@@ -55,9 +58,10 @@ class Scenario:
         return {
             "soil_moisture_1": random.uniform(65, 80),
             "soil_moisture_2": random.uniform(58, 72),
-            "soil_moisture_3": random.uniform(50, 68),
+            "soil_moisture_3": None,
             "tilt_x": random.uniform(-3.0, 3.0),
             "tilt_y": random.uniform(-2.5, 2.5),
+            "orientation": "Tilting Forward",
             "temperature": random.uniform(21, 25),
             "humidity": random.uniform(88, 95),
             "pressure": random.uniform(998, 1003),
@@ -67,12 +71,15 @@ class Scenario:
     @staticmethod
     def typhoon() -> dict:
         """Typhoon conditions — danger level."""
+        orientations = ["Tilting Forward", "Tilting Forward & Tilting Right",
+                        "Tilting Backward & Tilting Left", "Tilting Right"]
         return {
             "soil_moisture_1": random.uniform(82, 95),
             "soil_moisture_2": random.uniform(75, 88),
-            "soil_moisture_3": random.uniform(70, 85),
+            "soil_moisture_3": None,
             "tilt_x": random.uniform(-8.0, 8.0),
             "tilt_y": random.uniform(-6.0, 6.0),
+            "orientation": random.choice(orientations),
             "temperature": random.uniform(20, 23),
             "humidity": random.uniform(93, 99),
             "pressure": random.uniform(985, 998),
@@ -83,7 +90,7 @@ class Scenario:
 class LoRaSimulator:
     """
     Simulates LoRa sensor data for development without hardware.
-    
+
     Implements the same callback interface as LoRaReceiver,
     so it can be used as a drop-in replacement.
     """
@@ -102,8 +109,8 @@ class LoRaSimulator:
     async def start(self):
         """Start generating simulated sensor data."""
         self._running = True
-        print(f"[SIMULATOR] Started - generating data every {self.interval}s")
-        print(f"[SIMULATOR] Scenario cycle: normal -> light_rain -> heavy_rain -> typhoon -> normal")
+        print(f"[SIMULATOR] Started -- generating data every {self.interval}s", flush=True)
+        print(f"[SIMULATOR] Scenario cycle: normal -> light_rain -> heavy_rain -> typhoon -> normal", flush=True)
 
         while self._running:
             data = self._generate_data()
@@ -112,10 +119,12 @@ class LoRaSimulator:
                 await self._on_data_callback(data)
                 print(
                     f"[SIMULATOR] [{self._scenario_name.upper()}] "
-                    f"Temp: {data['temperature']:.1f}C, "
+                    f"Temp: {data['temperature']:.1f}°C, "
                     f"Humidity: {data['humidity']:.1f}%, "
                     f"Rain: {data['rainfall']:.1f}mm, "
-                    f"Soil1: {data['soil_moisture_1']:.1f}%"
+                    f"Soil: {data['soil_moisture_1']:.0f}%/{data['soil_moisture_2']:.0f}%, "
+                    f"Orient: {data['orientation']}",
+                    flush=True
                 )
 
             self._tick += 1
@@ -146,6 +155,7 @@ class LoRaSimulator:
         data["pressure"] += math.sin(time_factor * 0.3) * 0.5
 
         # Metadata
+        data["packet_id"] = self._tick
         data["raw_packet"] = "SIMULATED"
         data["is_valid"] = 1
 
@@ -154,4 +164,4 @@ class LoRaSimulator:
     async def stop(self):
         """Stop the simulator."""
         self._running = False
-        print("[SIMULATOR] Stopped")
+        print("[SIMULATOR] Stopped", flush=True)
