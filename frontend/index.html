@@ -325,6 +325,12 @@
         <section class="alerts-section">
             <div class="section-header">
                 <h2>Alert History</h2>
+                <div class="alert-legend-container" style="display: flex; gap: 1rem; align-items: center; font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--safe);"></span> SAFE</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--caution);"></span> CAUTION</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--warning);"></span> WARNING</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--danger);"></span> DANGER</span>
+                </div>
                 <div class="section-actions">
                     <button id="btn-export-csv" class="btn btn-secondary" onclick="exportCSV()">
                         📥 Export CSV
