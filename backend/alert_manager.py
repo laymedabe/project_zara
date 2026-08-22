@@ -66,11 +66,9 @@ class AlertManager:
                 self._pending_risk_level = current_level
                 self._consecutive_count = 1
 
-            # Trigger alert immediately if risk is ESCALATING (priority goes up).
-            # If risk is DE-ESCALATING, require 3 consecutive readings to prevent flapping.
-            if priority[current_level] > priority[self._previous_risk_level]:
-                should_alert = True
-            elif self._consecutive_count >= 3:
+            # Require 3 consecutive readings of the new state to prevent flapping 
+            # from sensor noise, regardless of whether it's escalating or de-escalating.
+            if self._consecutive_count >= 3:
                 should_alert = True
         else:
             self._pending_risk_level = None

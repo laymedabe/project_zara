@@ -327,11 +327,11 @@ function createAlertRow(alert) {
         : `<span class="alert-status">Active</span>`;
 
     row.innerHTML = `
-        <td>${formatDateTime(alert.timestamp)}</td>
-        <td>${createRiskBadge(alert.risk_level)}</td>
-        <td>${formatNum(alert.composite_score, 1) || '--'}</td>
-        <td>${alert.message}</td>
-        <td>${statusText}</td>
+        <td data-label="Time">${formatDateTime(alert.timestamp)}</td>
+        <td data-label="Level">${createRiskBadge(alert.risk_level)}</td>
+        <td data-label="Score">${formatNum(alert.composite_score, 1) || '--'}</td>
+        <td data-label="Message" class="msg-col">${alert.message}</td>
+        <td data-label="Status">${statusText}</td>
     `;
     return row;
 }

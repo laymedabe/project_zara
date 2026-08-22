@@ -332,7 +332,12 @@
         <!-- ============================================================= -->
         <section class="alerts-section">
             <div class="section-header">
-                <h2>Alert History</h2>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h2>Alert History</h2>
+                    <button class="alerts-toggle-btn" onclick="document.getElementById('alerts-table-container').classList.toggle('collapsed')">
+                        ▼ Show / Hide
+                    </button>
+                </div>
                 <div class="alert-legend-container" style="display: flex; gap: 1rem; align-items: center; font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 8px;">
                     <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--safe);"></span> SAFE</span>
                     <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:10px; height:10px; border-radius:50%; background:var(--caution);"></span> CAUTION</span>
@@ -345,7 +350,7 @@
                     </button>
                 </div>
             </div>
-            <div class="alerts-table-container">
+            <div class="alerts-table-container collapsed" id="alerts-table-container">
                 <table class="alerts-table" id="alerts-table">
                     <thead>
                         <tr>

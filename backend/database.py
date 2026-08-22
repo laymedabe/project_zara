@@ -247,11 +247,13 @@ class Database:
     async def get_alerts(self, limit: int = 50,
                          unacknowledged_only: bool = False) -> list[dict]:
         """Get recent alerts, optionally only unacknowledged ones."""
-        where = "WHERE acknowledged = 0" if unacknowledged_only else ""
+        where = "WHERE a.acknowledged = 0" if unacknowledged_only else ""
         sql = f"""
-            SELECT * FROM alerts
+            SELECT a.*, r.composite_score 
+            FROM alerts a
+            LEFT JOIN risk_assessments r ON a.assessment_id = r.id
             {where}
-            ORDER BY id DESC
+            ORDER BY a.id DESC
             LIMIT ?
         """
         async with self._db.execute(sql, (limit,)) as cursor:
