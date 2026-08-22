@@ -81,7 +81,7 @@ RISK_COLORS = {
 # =============================================================================
 RAINFALL_THRESHOLDS = {
     # (caution_mm, warning_mm, danger_mm)
-    "1hr":  {"caution": 7.5,  "warning": 15.0,  "danger": 30.0},
+    "1hr":  {"caution": 10.0, "warning": 30.0, "danger": 50.0},
     "3hr":  {"caution": 15.0, "warning": 30.0,  "danger": 65.0},
     "24hr": {"caution": 50.0, "warning": 100.0, "danger": 200.0},
     "72hr": {"caution": 100.0, "warning": 200.0, "danger": 350.0},
@@ -102,9 +102,9 @@ NUM_SOIL_SENSORS = 2  # Matches Arduino wiring (A0, A1)
 # SLOPE MOVEMENT THRESHOLDS (degrees) — From MPU6050
 # =============================================================================
 TILT_THRESHOLDS = {
-    "caution": 2.0,   # degrees change from baseline
-    "warning": 5.0,
-    "danger": 10.0,
+    "caution": 0.10,   # degrees change from baseline
+    "warning": 0.30,
+    "danger": 0.50,
 }
 
 # =============================================================================
