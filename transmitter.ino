@@ -1,20 +1,21 @@
-#include <Wire.h>
-#include <SPI.h>
-#include <LoRa.h>
+#include <Adafruit_BME280.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <LoRa.h>
+#include <SPI.h>
+#include <Wire.h>
 #include <math.h>
 
 // --- Pin Assignments ---
-#define LORA_SS     10
-#define LORA_RST    9
-#define LORA_DIO0   2     // LoRa Interrupt
-#define RAIN_PIN    3     // Rain Gauge Interrupt
-#define SOIL_PIN_1  A0    // Capacitive Soil Sensor 1
-#define SOIL_PIN_2  A1    // Capacitive Soil Sensor 2
+#define LORA_SS 10
+#define LORA_RST 9
+#define LORA_DIO0 2   // LoRa Interrupt
+#define RAIN_PIN 3    // Rain Gauge Interrupt
+#define SOIL_PIN_1 A0 // Capacitive Soil Sensor 1
+#define SOIL_PIN_2 A1 // Capacitive Soil Sensor 2
 
-#define LORA_BAND   433E6 // Set to 433E6, 868E6, or 915E6 depending on module regional frequency
+#define LORA_BAND                                                              \
+  433E6 // Set to 433E6, 868E6, or 915E6 depending on module regional frequency
 
 // --- Rain Gauge Settings ---
 const float MM_PER_TIP = 0.2794;
@@ -42,7 +43,7 @@ void countTip() {
 
 // Calculate tilt orientation
 String getOrientation(float ax, float ay, float az) {
-  float roll  = atan2(ay, az) * RAD_TO_DEG;
+  float roll = atan2(ay, az) * RAD_TO_DEG;
   float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * RAD_TO_DEG;
 
   String status = "";
@@ -54,10 +55,12 @@ String getOrientation(float ax, float ay, float az) {
   }
 
   if (roll > TILT_THRESHOLD_DEG) {
-    if (status.length() > 0) status += " & ";
+    if (status.length() > 0)
+      status += " & ";
     status += "Tilting Right";
   } else if (roll < -TILT_THRESHOLD_DEG) {
-    if (status.length() > 0) status += " & ";
+    if (status.length() > 0)
+      status += " & ";
     status += "Tilting Left";
   }
 
@@ -70,7 +73,8 @@ String getOrientation(float ax, float ay, float az) {
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial) delay(10);
+  while (!Serial)
+    delay(10);
 
   // 1. Setup Rain Gauge Interrupt
   pinMode(RAIN_PIN, INPUT_PULLUP);
@@ -98,7 +102,8 @@ void setup() {
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
   if (!LoRa.begin(LORA_BAND)) {
     Serial.println(F("Error: SX1278 LoRa initialization failed!"));
-    while (1);
+    while (1)
+      ;
   }
   Serial.println(F("SX1278 LoRa Transmitting..."));
 }
@@ -122,18 +127,16 @@ void loop() {
   // 4. Read MPU6050 Data
   sensors_event_t accel, gyro, mpuTemp;
   mpu.getEvent(&accel, &gyro, &mpuTemp);
-  String orientation = getOrientation(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z);
+  String orientation = getOrientation(
+      accel.acceleration.x, accel.acceleration.y, accel.acceleration.z);
 
   // 5. Construct CSV Payload String
-  // Format: [PacketID],[TempC],[Humidity%],[PressureHPa],[Soil1Raw],[Soil2Raw],[RainMM],[Orientation]
-  String payload = String(packetCounter) + "," +
-                   String(tempC, 1) + "," +
-                   String(humidityPct, 1) + "," +
-                   String(pressureHPa, 1) + "," +
-                   String(soil1Raw) + "," +
-                   String(soil2Raw) + "," +
-                   String(totalRainfallMM, 2) + "," +
-                   orientation;
+  // Format:
+  // [PacketID],[TempC],[Humidity%],[PressureHPa],[Soil1Raw],[Soil2Raw],[RainMM],[Orientation]
+  String payload = String(packetCounter) + "," + String(tempC, 1) + "," +
+                   String(humidityPct, 1) + "," + String(pressureHPa, 1) + "," +
+                   String(soil1Raw) + "," + String(soil2Raw) + "," +
+                   String(totalRainfallMM, 2) + "," + orientation;
 
   // 6. Transmit via LoRa
   Serial.print(F("Sending packet #"));
