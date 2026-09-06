@@ -1,18 +1,19 @@
-#include <Wire.h>
+#include <Adafruit_BME280.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <Wire.h>
 #include <math.h>
 
 // --- Pin Assignments ---
-const int RAIN_GAUGE_PIN = 2;   // Digital Pin 2 
-const int SOIL_PIN_1     = A0;  // Analog Pin A0 for Soil Sensor 1
-const int SOIL_PIN_2     = A1;  // Analog Pin A1 for Soil Sensor 2
+const int RAIN_GAUGE_PIN = 2; // Digital Pin 2
+const int SOIL_PIN_1 = A0;    // Analog Pin A0 for Soil Sensor 1
+const int SOIL_PIN_2 = A1;    // Analog Pin A1 for Soil Sensor 2
 
 // --- Calibration Settings ---
 const float MM_PER_TIP = 0.2794;            // Rainfall per tip in mm
 const unsigned long DEBOUNCE_TIME_MS = 200; // Switch debounce delay in ms
-const float TILT_THRESHOLD_DEG = 15.0;      // Tilt angle in degrees to register direction
+const float TILT_THRESHOLD_DEG =
+    15.0; // Tilt angle in degrees to register direction
 
 // --- Sensor Objects ---
 Adafruit_MPU6050 mpu;
@@ -33,7 +34,7 @@ void countTip() {
 // Function to calculate tilt state based on pitch and roll angles
 String getOrientation(float ax, float ay, float az) {
   // Convert acceleration vectors into Pitch and Roll angles in degrees
-  float roll  = atan2(ay, az) * RAD_TO_DEG;
+  float roll = atan2(ay, az) * RAD_TO_DEG;
   float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * RAD_TO_DEG;
 
   String status = "";
@@ -47,10 +48,12 @@ String getOrientation(float ax, float ay, float az) {
 
   // Check Roll (Left / Right)
   if (roll > TILT_THRESHOLD_DEG) {
-    if (status.length() > 0) status += " & ";
+    if (status.length() > 0)
+      status += " & ";
     status += "Tilting Right";
   } else if (roll < -TILT_THRESHOLD_DEG) {
-    if (status.length() > 0) status += " & ";
+    if (status.length() > 0)
+      status += " & ";
     status += "Tilting Left";
   }
 
@@ -64,7 +67,8 @@ String getOrientation(float ax, float ay, float az) {
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial) delay(10);
+  while (!Serial)
+    delay(10);
 
   // 1. Setup Tipping Bucket Pin
   pinMode(RAIN_GAUGE_PIN, INPUT_PULLUP);
@@ -100,7 +104,8 @@ void loop() {
   // 2. Read MPU6050 Data & Calculate Orientation
   sensors_event_t accel, gyro, mpuTemp;
   mpu.getEvent(&accel, &gyro, &mpuTemp);
-  String orientation = getOrientation(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z);
+  String orientation = getOrientation(
+      accel.acceleration.x, accel.acceleration.y, accel.acceleration.z);
 
   // 3. Read BME280 Sensor Data
   float tempC = bme.readTemperature();

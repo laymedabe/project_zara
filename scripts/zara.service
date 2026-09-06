@@ -6,10 +6,11 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/project_zara/backend
+User=root
+Group=root
+WorkingDirectory=/home/zara/project_zara/backend
 Environment=ZARA_MODE=live
-ExecStart=/home/pi/project_zara/.venv/bin/python main.py
+ExecStart=/home/zara/project_zara/.venv/bin/python main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
