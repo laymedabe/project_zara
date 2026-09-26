@@ -30,17 +30,20 @@ from config import (
 # =============================================================================
 def adc_to_moisture_pct(raw_adc: int) -> float:
     """
-    Convert raw capacitive soil moisture ADC reading to percentage.
-
-    Capacitive sensors are inverted:
-      - DRY = high ADC value (~620 in air)
-      - WET = low ADC value (~310 in water)
-
-    Returns 0-100% where 100% = saturated.
+    Convert raw soil moisture ADC reading to percentage.
+    Automatically handles both Capacitive (DRY > WET) and Resistive (WET > DRY) sensors.
     """
-    # Clamp to calibration range
-    clamped = max(SOIL_ADC_WET, min(SOIL_ADC_DRY, raw_adc))
-    # Invert: lower ADC = wetter
+    # Determine which bound is higher
+    high_bound = max(SOIL_ADC_DRY, SOIL_ADC_WET)
+    low_bound = min(SOIL_ADC_DRY, SOIL_ADC_WET)
+    
+    # Clamp the raw ADC reading between the bounds
+    clamped = max(low_bound, min(high_bound, raw_adc))
+    
+    # Map the clamped value to 0-100%
+    if SOIL_ADC_DRY == SOIL_ADC_WET:
+        return 0.0 # Prevent division by zero if uncalibrated
+        
     pct = (SOIL_ADC_DRY - clamped) / (SOIL_ADC_DRY - SOIL_ADC_WET) * 100.0
     return round(max(0, min(100, pct)), 1)
 
