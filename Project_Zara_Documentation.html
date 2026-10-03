@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Title</title>
+    <style>
+        @page {
+            margin: 1in 1in 1in 1.5in; /* Top, Right, Bottom, Left */
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            line-height: 2.0; /* Double spacing for research papers */
+            color: #000;
+            text-align: justify;
+        }
+        h1 {
+            text-align: center;
+            font-size: 20pt;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+        h2 {
+            font-size: 16pt;
+            margin-top: 30px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        h3 {
+            font-size: 14pt;
+            margin-top: 20px;
+            font-style: italic;
+        }
+        p {
+            text-indent: 40px; /* Indent first line of paragraphs */
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            margin-bottom: 15px;
+            padding-left: 60px; /* Indent lists */
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .image-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+        }
+        .figure-caption {
+            font-style: italic;
+            font-size: 11pt;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Title</h1>
+    
+    <h2>1. Introduction</h2>
+    <p>
+        The vulnerability of mountainous terrains to landslides during heavy rainfall events necessitates the development of reliable early warning systems. Traditional monitoring often relies on manual observation or internet-dependent weather updates, which can fail during severe storms. This study addresses this gap by developing a localized, independent robotic monitoring system. By placing environmental sensors directly on the high-risk slopes and transmitting data to a secure base station at the Barangay Hall, the system provides a localized approach to disaster risk reduction.
+    </p>
+
+    <h2>2. Objectives of the Study</h2>
+    <p>
+        <strong>General Objective:</strong><br>
+        The primary objective of this study is to develop and evaluate a Smart IoT-Based Landslide Early Warning System utilizing localized rainfall thresholds and machine learning algorithms for disaster risk reduction in Leon, Iloilo.
+    </p>
+    <p>
+        <strong>Specific Objectives:</strong><br>
+        Specifically, this study aims to:
+    </p>
+    <ol>
+        <li>Design and assemble a remote sensor node capable of real-time monitoring of cumulative rainfall, soil moisture saturation, and ground tilt/movement.</li>
+        <li>Develop a localized, offline base station using a Raspberry Pi to receive sensor data via long-range (LoRa) radio transmission without reliance on internet connectivity.</li>
+        <li>Implement a risk assessment algorithm that analyzes real-time data against localized thresholds to accurately classify the landslide danger level.</li>
+        <li>Create an accessible offline web dashboard that effectively communicates real-time environmental data and visual risk alerts to end-users at the Barangay Hall.</li>
+    </ol>
+
+    <h2>3. System Architecture</h2>
+    <p>
+        The system architecture illustrates the flow of data from the landslide-prone area to the end-user location. As shown in Figure 1, the architecture is composed of the sender (Input) located at the mountain slope and the receiver (Output) situated at the Barangay Hall.
+    </p>
+    
+    <div class="image-container">
+        <!-- Make sure to place your uploaded image in the project folder and name it 'architecture.png' -->
+        <img src="architecture.png" alt="System Architecture Diagram">
+        <div class="figure-caption">Figure 1. Architectural framework showing the Sensor Node (Sender) and the Base Station (Receiver) communicating via LoRa.</div>
+    </div>
+
+    <p>
+        As depicted in the architectural diagram, the operational workflow begins at the <strong>Landslide Prone Area (Sender/Input)</strong>. An Arduino Uno microcontroller continuously collects environmental data from an array of sensors, including a rain gauge for precipitation, two soil sensors for ground moisture, and a tilt sensor to detect slope movement. This raw data is packaged and transmitted wirelessly via a LoRa (Long Range) radio frequency antenna. 
+    </p>
+    <p>
+        The wireless signal travels to the <strong>Barangay Hall / End User Location (Receiver/Output)</strong>. Here, a matching LoRa receiver captures the data and feeds it into a Raspberry Pi 5b. The Raspberry Pi acts as the central intelligence of the system, storing the incoming information in a local Database and utilizing a Machine Learning logic engine to calculate the current risk level. 
+    </p>
+    <p>
+        Finally, the processed data is outputted to an Offline App hosted by the Raspberry Pi. End users can access this application to view Live Readings, monitor the Danger Meter Risk Level, and review the Record History. If the calculated risk exceeds safety thresholds, the system automatically triggers an Alert, providing crucial time for evacuation.
+    </p>
+
+    <h2>4. Materials and Components</h2>
+    <p>
+        The development of the system involved a selection of precise electronic components categorized by their location in the system architecture.
+    </p>
+    <h3>4.1 Sensor Node Components (Sender)</h3>
+    <ul>
+        <li><strong>Arduino Uno R3:</strong> The primary microcontroller responsible for executing the sensor reading logic.</li>
+        <li><strong>Rain Gauge (Tipping Bucket):</strong> A mechanical sensor that measures exact volumetric rainfall over time.</li>
+        <li><strong>Analog Soil Moisture Sensors (2x):</strong> Probes inserted into the earth to measure the water saturation levels of the soil.</li>
+        <li><strong>MPU6050 Accelerometer/Gyroscope (Tilt Sensor):</strong> A motion sensor utilized to detect minute shifts or tilts in the ground surface, indicating early slope failure.</li>
+        <li><strong>SX1278 LoRa Transmitter:</strong> A long-range, low-power radio module used to transmit the collected data to the base station.</li>
+    </ul>
+    
+    <h3>4.2 Base Station Components (Receiver)</h3>
+    <ul>
+        <li><strong>Raspberry Pi 5b:</strong> A single-board computer that hosts the backend logic, database, offline app, and alert system.</li>
+        <li><strong>SX1278 LoRa Receiver:</strong> The radio module configured to listen for incoming wireless signals from the sender.</li>
+    </ul>
+
+    <h2>5. Operational Procedures (Instructions for Use)</h2>
+    <p>
+        The system is designed for autonomous operation, requiring minimal technical interaction from the end-users at the Barangay Hall. The following procedures outline the standard usage of the system.
+    </p>
+    
+    <h3>5.1 System Initialization</h3>
+    <p>
+        Upon providing power to the Raspberry Pi base station, the system will automatically boot and initialize the calculations, logic, and database. Concurrently, it will establish a local Wi-Fi access point (Offline App).
+    </p>
+
+    <h3>5.2 Accessing the Dashboard</h3>
+    <p>
+        Users must connect their personal devices (smartphones or laptops) to the system's Wi-Fi network. Once connected, users navigate to the local IP address via a standard web browser to access the graphical user interface showing live readings.
+    </p>
+
+    <h3>5.3 Interpreting Risk Levels</h3>
+    <p>
+        The dashboard translates raw sensor data into actionable insights using a Danger Meter Risk Level:
+    </p>
+    <ul>
+        <li><strong>SAFE (Green):</strong> Environmental conditions are within normal parameters.</li>
+        <li><strong>CAUTION (Amber):</strong> Initial thresholds have been met. Officials should begin monitoring closely.</li>
+        <li><strong>WARNING (Orange):</strong> Critical thresholds for heavy rainfall or soil saturation reached. Preparations for possible evacuation should commence.</li>
+        <li><strong>DANGER (Red):</strong> Extreme environmental conditions or ground tilt detected. Immediate evacuation protocols must be initiated and alarms triggered.</li>
+    </ul>
+
+    <h2>6. Conclusion</h2>
+    <p>
+        The developed system demonstrates a practical application of IoT methodologies in disaster risk reduction. By providing an offline, localized, and highly autonomous early warning system, vulnerable communities are equipped with a crucial technological tool to mitigate the impacts of landslides and preserve human life.
+    </p>
+
+</body>
+</html>
