@@ -109,6 +109,12 @@ def parse_csv_packet(payload_str: str) -> Optional[dict]:
 
         packet_id = int(parts[0])
         temperature = float(parts[1])
+        
+        # If I2C hardware fails on Arduino, temp jumps to 181.5C. Drop it completely.
+        if temperature > 100 or temperature < -40:
+            print(f"[LORA] Hardware failure packet dropped (Temp={temperature}C)")
+            return None
+            
         humidity = float(parts[2])
         pressure = float(parts[3])
         soil1_raw = int(parts[4])
