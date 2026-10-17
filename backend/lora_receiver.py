@@ -15,6 +15,7 @@ Orientation values: "Flat", "Tilting Forward", "Tilting Backward",
 """
 
 import asyncio
+import math
 from datetime import datetime, timezone
 from typing import Optional, Callable, Awaitable
 
@@ -108,15 +109,29 @@ def parse_csv_packet(payload_str: str) -> Optional[dict]:
             return None
 
         packet_id = int(parts[0])
-        temperature = float(parts[1])
         
-        # If I2C hardware fails on Arduino, temp jumps to 181.5C. Drop it completely.
-        if temperature > 100 or temperature < -40:
-            print(f"[LORA] Hardware failure packet dropped (Temp={temperature}C)")
-            return None
-            
-        humidity = float(parts[2])
-        pressure = float(parts[3])
+        # Safely parse floats, replacing any NaN or out-of-range sensor glitches
+        try:
+            temperature = float(parts[1])
+            if math.isnan(temperature) or temperature > 100 or temperature < -40:
+                temperature = 0.0
+        except ValueError:
+            temperature = 0.0
+
+        try:
+            humidity = float(parts[2])
+            if math.isnan(humidity):
+                humidity = 0.0
+        except ValueError:
+            humidity = 0.0
+
+        try:
+            pressure = float(parts[3])
+            if math.isnan(pressure):
+                pressure = 0.0
+        except ValueError:
+            pressure = 0.0
+
         soil1_raw = int(parts[4])
         soil2_raw = int(parts[5])
         rainfall_total_mm = float(parts[6])
@@ -259,17 +274,24 @@ class LoRaReceiver:
         print("[LORA] Listening for Arduino CSV packets...", flush=True)
 
         while self._running:
-            # Check DIO0 for RxDone interrupt
-            if GPIO.input(LORA_DIO0_PIN):
-                # Read IRQ flags
-                irq_flags = self._read_register(0x12)
+            # Check DIO0 pin OR read SX1278 RegIrqFlags (0x12) directly via SPI
+            irq_flags = self._read_register(0x12)
+            dio0_high = False
+            try:
+                dio0_high = bool(GPIO.input(LORA_DIO0_PIN))
+            except Exception:
+                pass
 
-                if irq_flags & 0x40:  # RxDone
-                    if irq_flags & 0x20:
-                        print("[LORA] CRC error in received packet", flush=True)
-                    else:
-                        # Read payload length
-                        payload_length = self._read_register(0x13)
+            if (irq_flags & 0x40) or dio0_high:  # RxDone
+                # Refresh flags
+                irq_flags = self._read_register(0x12)
+                has_crc_error = bool(irq_flags & 0x20)
+
+                if has_crc_error:
+                    print("[LORA] Notice: CRC error flag set (possible CRC mismatch or weak signal). Attempting to decode payload...", flush=True)
+
+                # Read payload length
+                payload_length = self._read_register(0x13)
 
                         # Set FIFO address to current RX address
                         current_addr = self._read_register(0x10)

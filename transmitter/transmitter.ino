@@ -91,11 +91,15 @@ void setup() {
     Serial.println(F("BME280 Initialized."));
   }
 
-  // 3. Initialize MPU6050
-  if (!mpu.begin()) {
-    Serial.println(F("Error: MPU6050 not detected!"));
+  // 3. Initialize MPU6050 (try both 0x68 and 0x69)
+  if (!mpu.begin(0x68)) {
+    if (!mpu.begin(0x69)) {
+      Serial.println(F("Error: MPU6050 not detected!"));
+    } else {
+      Serial.println(F("MPU6050 Initialized at 0x69."));
+    }
   } else {
-    Serial.println(F("MPU6050 Initialized."));
+    Serial.println(F("MPU6050 Initialized at 0x68."));
   }
 
   // 4. Initialize SX1278 LoRa Module
@@ -105,6 +109,7 @@ void setup() {
     while (1)
       ;
   }
+  LoRa.enableCrc(); // Enable CRC matching Raspberry Pi SX1278 settings
   Serial.println(F("SX1278 LoRa Transmitting..."));
 }
 
@@ -123,6 +128,11 @@ void loop() {
   float tempC = bme.readTemperature();
   float humidityPct = bme.readHumidity();
   float pressureHPa = bme.readPressure() / 100.0F;
+
+  // Safeguard against NaN in case of sensor glitch
+  if (isnan(tempC)) tempC = 0.0;
+  if (isnan(humidityPct)) humidityPct = 0.0;
+  if (isnan(pressureHPa)) pressureHPa = 0.0;
 
   // 4. Read MPU6050 Data
   sensors_event_t accel, gyro, mpuTemp;
