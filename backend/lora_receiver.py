@@ -227,6 +227,12 @@ class LoRaReceiver:
 
     async def _configure_sx1278(self):
         """Write configuration registers to SX1278."""
+        # 1. Verify SPI communication by reading chip version
+        version = self._read_register(0x42)
+        print(f"[LORA] SX1278 Chip Version: 0x{version:02X} (Expected: 0x12)", flush=True)
+        if version != 0x12:
+            print(f"[LORA] WARNING: SX1278 SPI read returned 0x{version:02X}! Check SPI/power wiring on Raspberry Pi.", flush=True)
+
         # Set sleep mode
         self._write_register(0x01, 0x00)
         await asyncio.sleep(0.01)
@@ -241,6 +247,15 @@ class LoRaReceiver:
         self._write_register(0x07, (freq_int >> 8) & 0xFF)
         self._write_register(0x08, freq_int & 0xFF)
 
+        # Base FIFO addresses
+        self._write_register(0x0E, 0x00)  # TxBaseAddr
+        self._write_register(0x0F, 0x00)  # RxBaseAddr
+        self._write_register(0x0D, 0x00)  # FifoAddrPtr
+
+        # LNA Boost for maximum receive sensitivity
+        lna = self._read_register(0x0C)
+        self._write_register(0x0C, lna | 0x03)
+
         # Set bandwidth, coding rate, spreading factor
         bw_map = {7800: 0, 10400: 1, 15600: 2, 20800: 3, 31250: 4,
                   41700: 5, 62500: 6, 125000: 7, 250000: 8, 500000: 9}
@@ -248,12 +263,20 @@ class LoRaReceiver:
         self._write_register(0x1D, (bw_val << 4) | ((LORA_CODING_RATE - 4) << 1))
         self._write_register(0x1E, (LORA_SPREADING_FACTOR << 4) | 0x04)  # CRC on
 
+        # Turn on AGC Auto (RegModemConfig3)
+        self._write_register(0x26, 0x04)
+
+        # Sync word: 0x12 (matches default Arduino LoRa library)
+        self._write_register(0x39, 0x12)
+
+        # DIO0 mapping: 00 = RxDone
+        self._write_register(0x40, 0x00)
+
         # Implicit header mode OFF (explicit header — variable length packets)
-        # This is important for CSV text packets of varying length
         self._write_register(0x1D, self._read_register(0x1D) & 0xFE)
 
         # Set max payload length (CSV packets can be up to ~80 chars)
-        self._write_register(0x23, 128)  # Max payload length
+        self._write_register(0x23, 128)
 
         # Set continuous receive mode
         self._write_register(0x01, 0x85)
@@ -273,7 +296,13 @@ class LoRaReceiver:
 
         print("[LORA] Listening for Arduino CSV packets...", flush=True)
 
+        loop_count = 0
         while self._running:
+            loop_count += 1
+            if loop_count % 100 == 0:  # Every ~10 seconds
+                current_mode = self._read_register(0x01)
+                current_rssi = self._read_register(0x1B) - 157
+                print(f"[LORA] Receiver active (RegOpMode: 0x{current_mode:02X}, Background RSSI: {current_rssi}dBm)", flush=True)
             # Check DIO0 pin OR read SX1278 RegIrqFlags (0x12) directly via SPI
             irq_flags = self._read_register(0x12)
             dio0_high = False
@@ -293,49 +322,49 @@ class LoRaReceiver:
                 # Read payload length
                 payload_length = self._read_register(0x13)
 
-                        # Set FIFO address to current RX address
-                        current_addr = self._read_register(0x10)
-                        self._write_register(0x0D, current_addr)
+                # Set FIFO address to current RX address
+                current_addr = self._read_register(0x10)
+                self._write_register(0x0D, current_addr)
 
-                        # Read payload bytes
-                        rx_bytes = bytes(
-                            self._read_register(0x00) for _ in range(payload_length)
-                        )
+                # Read payload bytes
+                rx_bytes = bytes(
+                    self._read_register(0x00) for _ in range(payload_length)
+                )
 
-                        # Decode CSV text
-                        try:
-                            payload_str = rx_bytes.decode('ascii')
-                        except UnicodeDecodeError:
-                            print(f"[LORA] Non-ASCII payload received ({len(rx_bytes)} bytes)", flush=True)
-                            self._write_register(0x12, 0xFF)
-                            continue
-
-                        # Read RSSI for signal quality monitoring
-                        rssi = self._read_register(0x1A) - 157
-
-                        # Parse the CSV payload
-                        data = parse_csv_packet(payload_str)
-                        if data:
-                            # Compute rainfall delta (Arduino sends cumulative total)
-                            data["rainfall"] = self._compute_rainfall_delta(data["rainfall"])
-                            data["rssi"] = rssi
-
-                            if self._on_data_callback:
-                                await self._on_data_callback(data)
-
-                            print(
-                                f"[LORA] Packet #{data['packet_id']} | "
-                                f"Temp: {data['temperature']:.1f}°C, "
-                                f"Humidity: {data['humidity']:.1f}%, "
-                                f"Rain: {data['rainfall']:.2f}mm, "
-                                f"Soil: {data['soil_moisture_1']:.0f}%/{data['soil_moisture_2']:.0f}%, "
-                                f"Orient: {data['orientation']} | "
-                                f"RSSI: {rssi}dBm",
-                                flush=True
-                            )
-
-                    # Clear IRQ flags
+                # Decode CSV text
+                try:
+                    payload_str = rx_bytes.decode('ascii')
+                except UnicodeDecodeError:
+                    print(f"[LORA] Non-ASCII payload received ({len(rx_bytes)} bytes)", flush=True)
                     self._write_register(0x12, 0xFF)
+                    continue
+
+                # Read RSSI for signal quality monitoring
+                rssi = self._read_register(0x1A) - 157
+
+                # Parse the CSV payload
+                data = parse_csv_packet(payload_str)
+                if data:
+                    # Compute rainfall delta (Arduino sends cumulative total)
+                    data["rainfall"] = self._compute_rainfall_delta(data["rainfall"])
+                    data["rssi"] = rssi
+
+                    if self._on_data_callback:
+                        await self._on_data_callback(data)
+
+                    print(
+                        f"[LORA] Packet #{data['packet_id']} | "
+                        f"Temp: {data['temperature']:.1f}°C, "
+                        f"Humidity: {data['humidity']:.1f}%, "
+                        f"Rain: {data['rainfall']:.2f}mm, "
+                        f"Soil: {data['soil_moisture_1']:.0f}%/{data['soil_moisture_2']:.0f}%, "
+                        f"Orient: {data['orientation']} | "
+                        f"RSSI: {rssi}dBm",
+                        flush=True
+                    )
+
+                # Clear IRQ flags
+                self._write_register(0x12, 0xFF)
 
             await asyncio.sleep(0.1)  # Poll every 100ms
 
