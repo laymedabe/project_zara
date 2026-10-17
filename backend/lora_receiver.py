@@ -233,16 +233,21 @@ class LoRaReceiver:
         if version != 0x12:
             print(f"[LORA] WARNING: SX1278 SPI read returned 0x{version:02X}! Check SPI/power wiring on Raspberry Pi.", flush=True)
 
-        # Set sleep mode
+        # 433 MHz requires LowFrequencyModeOn (Bit 3 = 1) in RegOpMode
+        low_freq_bit = 0x08 if LORA_FREQUENCY < 525E6 else 0x00
+
+        # Set sleep mode with LoRa mode and correct frequency band
         self._write_register(0x01, 0x00)
         await asyncio.sleep(0.01)
+        self._write_register(0x01, 0x80 | low_freq_bit)  # LoRa sleep mode
+        await asyncio.sleep(0.01)
 
-        # Set LoRa mode
-        self._write_register(0x01, 0x80)
+        # Standby mode
+        self._write_register(0x01, 0x81 | low_freq_bit)
         await asyncio.sleep(0.01)
 
         # Set frequency (433 MHz)
-        freq_int = int(LORA_FREQUENCY / 61.035)  # FSTEP = 61.035 Hz
+        freq_int = int(LORA_FREQUENCY / 61.03515625)  # FSTEP = 61.03515625 Hz
         self._write_register(0x06, (freq_int >> 16) & 0xFF)
         self._write_register(0x07, (freq_int >> 8) & 0xFF)
         self._write_register(0x08, freq_int & 0xFF)
@@ -261,7 +266,9 @@ class LoRaReceiver:
                   41700: 5, 62500: 6, 125000: 7, 250000: 8, 500000: 9}
         bw_val = bw_map.get(int(LORA_BANDWIDTH), 7)
         self._write_register(0x1D, (bw_val << 4) | ((LORA_CODING_RATE - 4) << 1))
-        self._write_register(0x1E, (LORA_SPREADING_FACTOR << 4) | 0x04)  # CRC on
+
+        # Explicit header mode: receiver accepts both CRC-enabled and CRC-disabled packets
+        self._write_register(0x1E, (LORA_SPREADING_FACTOR << 4))
 
         # Turn on AGC Auto (RegModemConfig3)
         self._write_register(0x26, 0x04)
@@ -278,8 +285,8 @@ class LoRaReceiver:
         # Set max payload length (CSV packets can be up to ~80 chars)
         self._write_register(0x23, 128)
 
-        # Set continuous receive mode
-        self._write_register(0x01, 0x85)
+        # Set continuous receive mode with LowFrequencyModeOn enabled (0x8D for 433MHz)
+        self._write_register(0x01, 0x85 | low_freq_bit)
 
     def _write_register(self, address: int, value: int):
         """Write a value to an SX1278 register via SPI."""
@@ -299,10 +306,17 @@ class LoRaReceiver:
         loop_count = 0
         while self._running:
             loop_count += 1
+            irq_flags = self._read_register(0x12)
+            dio0_high = False
+            try:
+                dio0_high = bool(GPIO.input(LORA_DIO0_PIN))
+            except Exception:
+                pass
+
             if loop_count % 100 == 0:  # Every ~10 seconds
                 current_mode = self._read_register(0x01)
                 current_rssi = self._read_register(0x1B) - 157
-                print(f"[LORA] Receiver active (RegOpMode: 0x{current_mode:02X}, Background RSSI: {current_rssi}dBm)", flush=True)
+                print(f"[LORA] Receiver active (RegOpMode: 0x{current_mode:02X}, IrqFlags: 0x{irq_flags:02X}, DIO0: {dio0_high}, RSSI: {current_rssi}dBm)", flush=True)
             # Check DIO0 pin OR read SX1278 RegIrqFlags (0x12) directly via SPI
             irq_flags = self._read_register(0x12)
             dio0_high = False

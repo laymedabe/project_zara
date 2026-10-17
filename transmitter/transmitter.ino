@@ -76,6 +76,11 @@ void setup() {
   while (!Serial)
     delay(10);
 
+  Wire.begin();
+  #if defined(WIRE_HAS_TIMEOUT)
+  Wire.setWireTimeout(3000, true); // Prevent I2C bus lockup
+  #endif
+
   // 1. Setup Rain Gauge Interrupt
   pinMode(RAIN_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(RAIN_PIN), countTip, FALLING);
@@ -91,23 +96,24 @@ void setup() {
     Serial.println(F("BME280 Initialized."));
   }
 
-  // 3. Initialize MPU6050 (try both 0x68 and 0x69)
-  if (!mpu.begin(0x68)) {
-    if (!mpu.begin(0x69)) {
-      Serial.println(F("Error: MPU6050 not detected!"));
-    } else {
-      Serial.println(F("MPU6050 Initialized at 0x69."));
-    }
+  // 3. Initialize MPU6050
+  if (!mpu.begin()) {
+    Serial.println(F("Error: MPU6050 not detected! (Continuing with default Flat orientation)"));
   } else {
-    Serial.println(F("MPU6050 Initialized at 0x68."));
+    Serial.println(F("MPU6050 Initialized."));
   }
 
   // 4. Initialize SX1278 LoRa Module
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
-  if (!LoRa.begin(LORA_BAND)) {
-    Serial.println(F("Error: SX1278 LoRa initialization failed!"));
-    while (1)
-      ;
+  int loraRetries = 0;
+  while (!LoRa.begin(LORA_BAND)) {
+    Serial.println(F("Error: SX1278 LoRa initialization failed! Retrying in 1s..."));
+    delay(1000);
+    loraRetries++;
+    if (loraRetries >= 5) {
+      Serial.println(F("Check LoRa wiring: SS=10, RST=9, DIO0=2, MOSI=11, MISO=12, SCK=13, 3.3V, GND"));
+      loraRetries = 0;
+    }
   }
   LoRa.enableCrc(); // Enable CRC matching Raspberry Pi SX1278 settings
   Serial.println(F("SX1278 LoRa Transmitting..."));
