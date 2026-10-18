@@ -98,14 +98,67 @@ def parse_csv_packet(payload_str: str) -> Optional[dict]:
     Returns None if the packet is malformed.
     """
     try:
-        # The orientation field may contain commas in combinations like
-        # "Tilting Forward & Tilting Right", but the Arduino uses " & " not ","
-        # so a simple split on "," should work for 8 fields.
-        # However, orientation is the last field, so we split with maxsplit=7
-        parts = payload_str.strip().split(",", 7)
+        raw_clean = payload_str.strip()
+
+        # Support Key-Value packet format (e.g. ID:12, T:NAN, H:NAN, P:NAN, AX:6.13, AY:-77.23, AZ:115.23)
+        if ":" in raw_clean and any(k in raw_clean.upper() for k in ["ID:", "T:", "AX:"]):
+            kv = {}
+            for item in raw_clean.split(","):
+                if ":" in item:
+                    k, v = item.split(":", 1)
+                    kv[k.strip().upper()] = v.strip()
+
+            def safe_float(val_str, default=0.0):
+                try:
+                    f = float(val_str)
+                    return default if (math.isnan(f) or math.isinf(f)) else f
+                except (ValueError, TypeError):
+                    return default
+
+            packet_id = int(safe_float(kv.get("ID", 0)))
+            temperature = safe_float(kv.get("T", 0.0))
+            humidity = safe_float(kv.get("H", 0.0))
+            pressure = safe_float(kv.get("P", 0.0))
+            soil1_raw = int(safe_float(kv.get("S1", kv.get("SOIL1", 0))))
+            soil2_raw = int(safe_float(kv.get("S2", kv.get("SOIL2", 0))))
+            rainfall_total_mm = safe_float(kv.get("R", kv.get("RAIN", 0.0)))
+
+            tilt_x = safe_float(kv.get("AX", kv.get("TILTX", 0.0)))
+            tilt_y = safe_float(kv.get("AY", kv.get("TILTY", 0.0)))
+
+            orientation = kv.get("O", kv.get("ORIENT", ""))
+            if not orientation:
+                if abs(tilt_x) > 15 or abs(tilt_y) > 15:
+                    orientation = f"Tilt X:{tilt_x:.1f}° Y:{tilt_y:.1f}°"
+                else:
+                    orientation = "Flat"
+
+            soil_moisture_1 = adc_to_moisture_pct(soil1_raw) if soil1_raw > 0 else 0.0
+            soil_moisture_2 = adc_to_moisture_pct(soil2_raw) if soil2_raw > 0 else 0.0
+
+            return {
+                "packet_id": packet_id,
+                "soil_moisture_1": soil_moisture_1,
+                "soil_moisture_2": soil_moisture_2,
+                "soil_moisture_3": None,
+                "soil1_raw": soil1_raw,
+                "soil2_raw": soil2_raw,
+                "tilt_x": tilt_x,
+                "tilt_y": tilt_y,
+                "orientation": orientation,
+                "temperature": temperature,
+                "humidity": humidity,
+                "pressure": pressure,
+                "rainfall": rainfall_total_mm,
+                "raw_packet": raw_clean,
+                "is_valid": 1,
+            }
+
+        # Standard CSV format: PacketID,TempC,Humidity%,PressureHPa,Soil1Raw,Soil2Raw,RainMM,Orientation
+        parts = raw_clean.split(",", 7)
 
         if len(parts) < 8:
-            print(f"[LORA] Malformed packet -- expected 8 fields, got {len(parts)}: {payload_str[:60]}")
+            print(f"[LORA] Malformed packet -- expected 8 fields, got {len(parts)}: {raw_clean[:60]}")
             return None
 
         packet_id = int(parts[0])
@@ -195,20 +248,23 @@ class LoRaReceiver:
             import RPi.GPIO as GPIO
 
             # Setup GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(LORA_RST_PIN, GPIO.OUT)
-            GPIO.setup(LORA_DIO0_PIN, GPIO.IN)
+            try:
+                GPIO.setmode(GPIO.BCM)
+                GPIO.setup(LORA_RST_PIN, GPIO.OUT)
+                GPIO.setup(LORA_DIO0_PIN, GPIO.IN)
 
-            # Reset the module
-            GPIO.output(LORA_RST_PIN, GPIO.LOW)
-            await asyncio.sleep(0.01)
-            GPIO.output(LORA_RST_PIN, GPIO.HIGH)
-            await asyncio.sleep(0.01)
+                # Reset the module
+                GPIO.output(LORA_RST_PIN, GPIO.LOW)
+                await asyncio.sleep(0.01)
+                GPIO.output(LORA_RST_PIN, GPIO.HIGH)
+                await asyncio.sleep(0.01)
+            except Exception as e:
+                print(f"[LORA] GPIO setup note: {e}", flush=True)
 
             # Initialize SPI
             self._spi = spidev.SpiDev()
             self._spi.open(LORA_SPI_BUS, LORA_SPI_CS)
-            self._spi.max_speed_hz = 5000000  # 5 MHz
+            self._spi.max_speed_hz = 1000000  # 1 MHz (stable with jumper wires)
 
             # Configure SX1278 registers
             await self._configure_sx1278()
@@ -325,7 +381,7 @@ class LoRaReceiver:
             except Exception:
                 pass
 
-            if (irq_flags & 0x40) or dio0_high:  # RxDone
+            if irq_flags != 0xFF and ((irq_flags & 0x40) or dio0_high):  # RxDone
                 # Refresh flags
                 irq_flags = self._read_register(0x12)
                 has_crc_error = bool(irq_flags & 0x20)
@@ -335,6 +391,10 @@ class LoRaReceiver:
 
                 # Read payload length
                 payload_length = self._read_register(0x13)
+                if payload_length == 0 or payload_length > 128:
+                    self._write_register(0x12, 0xFF)
+                    await asyncio.sleep(0.05)
+                    continue
 
                 # Set FIFO address to current RX address
                 current_addr = self._read_register(0x10)
