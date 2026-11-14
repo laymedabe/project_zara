@@ -55,18 +55,17 @@ def adc_to_moisture_pct(raw_adc: int) -> float:
 def orientation_to_tilt(orientation: str) -> tuple[float, float]:
     """
     Estimate tilt_x (pitch) and tilt_y (roll) from Arduino orientation string.
-
-    The Arduino code uses a 15° threshold, so we estimate:
-      - "Flat" → 0°, 0°
-      - "Tilting Forward" → +20° pitch
-      - "Tilting Backward" → -20° pitch
-      - "Tilting Right" → +20° roll
-      - "Tilting Left" → -20° roll
-      - Combinations: both axes affected
-
-    These are rough estimates. For precise angles, the Arduino code should
-    be modified to send raw pitch/roll values.
+    Supports direct angles (e.g. "Tilt X: 3.5 Y: -2.1") or text ("Tilting Forward").
     """
+    import re
+    # Extract any explicit numeric coordinates (e.g. "Tilt X:3.2 Y:-1.5" or "3.2, -1.5")
+    nums = re.findall(r'[-+]?\d*\.?\d+', orientation)
+    if len(nums) >= 2:
+        try:
+            return round(float(nums[0]), 2), round(float(nums[1]), 2)
+        except ValueError:
+            pass
+
     tilt_x = 0.0  # Pitch
     tilt_y = 0.0  # Roll
 

@@ -115,8 +115,10 @@ function handleRiskUpdate(data) {
  * Handle incoming alert from WebSocket.
  */
 function handleAlert(data) {
-    // Show toast
-    showToast(data.message, data.risk_level);
+    // Show popup toast only for elevated risks (CAUTION, WARNING, DANGER)
+    if (data.risk_level !== 'SAFE') {
+        showToast(data.message, data.risk_level);
+    }
 
     // Show/update alert banner for WARNING and DANGER
     if (data.risk_level === 'WARNING' || data.risk_level === 'DANGER') {

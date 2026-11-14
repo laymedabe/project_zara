@@ -49,68 +49,40 @@ class AlertManager:
             print(f"[ALERT] GPIO not available ({e}) -- running in software-only mode")
 
     async def process_risk_assessment(self, assessment: dict):
-        """Process a new risk assessment and generate alerts if needed."""
+        """Process a new risk assessment and generate an alert entry on every cycle."""
         current_level = RiskLevel(assessment["risk_level"])
         score = assessment["composite_score"]
-
-        should_alert = False
         now = datetime.now(timezone.utc)
 
-        # Risk level priority for quick comparison
-        priority = {RiskLevel.SAFE: 0, RiskLevel.CAUTION: 1, RiskLevel.WARNING: 2, RiskLevel.DANGER: 3}
+        # Build message for the current level
+        message = self._build_alert_message(current_level, score, assessment)
 
-        if current_level != self._previous_risk_level:
-            if current_level == self._pending_risk_level:
-                self._consecutive_count += 1
-            else:
-                self._pending_risk_level = current_level
-                self._consecutive_count = 1
+        # Store alert in database
+        alert_id = await db.insert_alert(
+            risk_level=current_level.value,
+            message=message,
+            assessment_id=assessment.get("id"),
+        )
 
-            # Require 3 consecutive readings of the new state to prevent flapping 
-            # from sensor noise, regardless of whether it's escalating or de-escalating.
-            if self._consecutive_count >= 3:
-                should_alert = True
-        else:
-            self._pending_risk_level = None
-            self._consecutive_count = 0
-            
-            # If we are staying in WARNING or DANGER, repeat the alert every 5 minutes
-            if current_level in (RiskLevel.WARNING, RiskLevel.DANGER):
-                if (now - self._last_alert_time).total_seconds() >= 300:
-                    should_alert = True
+        # Broadcast to dashboard via WebSocket so Alert History updates live
+        await ws_manager.broadcast_alert({
+            "id": alert_id,
+            "risk_level": current_level.value,
+            "composite_score": score,
+            "message": message,
+            "timestamp": now.isoformat(),
+        })
 
-        if should_alert:
-            message = self._build_alert_message(current_level, score, assessment)
+        # Update GPIO LEDs
+        self._update_gpio_leds(current_level)
 
-            # Store alert in database
-            alert_id = await db.insert_alert(
-                risk_level=current_level.value,
-                message=message,
-                assessment_id=assessment.get("id"),
-            )
-
-            # Broadcast to dashboard via WebSocket
-            await ws_manager.broadcast_alert({
-                "id": alert_id,
-                "risk_level": current_level.value,
-                "composite_score": score,
-                "message": message,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
-
-            # Update GPIO LEDs
-            self._update_gpio_leds(current_level)
-
-            # Trigger buzzer for WARNING and DANGER
-            if current_level in (RiskLevel.WARNING, RiskLevel.DANGER):
+        # Trigger buzzer only for WARNING and DANGER when transitioning or periodic
+        if current_level in (RiskLevel.WARNING, RiskLevel.DANGER):
+            if current_level != self._previous_risk_level:
                 self._trigger_buzzer(current_level)
 
-            await db.log("WARNING" if current_level != RiskLevel.SAFE else "INFO",
-                         "AlertManager",
-                         f"Alert generated: {current_level.value} (score: {score:.1f}%)")
-            
-            self._last_alert_time = now
-            self._previous_risk_level = current_level
+        self._last_alert_time = now
+        self._previous_risk_level = current_level
 
     def _build_alert_message(self, level: RiskLevel, score: float,
                              assessment: dict) -> str:

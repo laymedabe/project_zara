@@ -61,10 +61,7 @@ async def on_sensor_data(data: dict):
     # 3. Broadcast raw sensor data to dashboard
     await ws_manager.broadcast_sensor_data(data)
 
-    if not is_valid:
-        return
-
-    # 4. Extract features
+    # 4. Extract features (assess risk even if non-critical sensor flagged)
     features = await extract_features(data)
 
     # 5. Assess risk

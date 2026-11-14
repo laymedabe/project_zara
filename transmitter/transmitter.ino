@@ -85,23 +85,8 @@ void setup() {
   pinMode(RAIN_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(RAIN_PIN), countTip, FALLING);
 
-  // 2. Initialize BME280
-  bool bmeStatus = bme.begin(0x76);
-  if (!bmeStatus) {
-    bmeStatus = bme.begin(0x77);
-  }
-  if (!bmeStatus) {
-    Serial.println(F("Error: BME280 not detected!"));
-  } else {
-    Serial.println(F("BME280 Initialized."));
-  }
-
-  // 3. Initialize MPU6050
-  if (!mpu.begin()) {
-    Serial.println(F("Error: MPU6050 not detected! (Continuing with default Flat orientation)"));
-  } else {
-    Serial.println(F("MPU6050 Initialized."));
-  }
+  // 2. BME280 & MPU6050 (Simulated values sent in loop)
+  Serial.println(F("BME280 & MPU6050: Simulated mode active"));
 
   // 4. Initialize SX1278 LoRa Module
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
@@ -116,35 +101,35 @@ void setup() {
     }
   }
   LoRa.enableCrc(); // Enable CRC matching Raspberry Pi SX1278 settings
-  Serial.println(F("SX1278 LoRa Transmitting..."));
 }
 
 void loop() {
-  // 1. Read Dual Soil Moisture Sensors
+  // 1. Read Dual Soil Moisture Sensors (REAL SENSORS)
   int soil1Raw = analogRead(SOIL_PIN_1);
   int soil2Raw = analogRead(SOIL_PIN_2);
 
-  // 2. Copy Rain Count Interrupt Variable
+  // 2. Read Rain Gauge Tipping Bucket (REAL SENSOR)
   noInterrupts();
   unsigned long currentTips = tipCount;
   interrupts();
   float totalRainfallMM = currentTips * MM_PER_TIP;
 
-  // 3. Read BME280 Data
-  float tempC = bme.readTemperature();
-  float humidityPct = bme.readHumidity();
-  float pressureHPa = bme.readPressure() / 100.0F;
+  // 3. Simulated BME280 (Smooth dynamic weather drift)
+  float t = millis() / 10000.0;
+  float tempC = 28.5 + sin(t * 0.5) * 1.5;            // Smoothly drifts: 27.0°C - 30.0°C
+  float humidityPct = 78.0 + cos(t * 0.4) * 4.0;      // Smoothly drifts: 74.0% - 82.0%
+  float pressureHPa = 1012.3 + sin(t * 0.2) * 1.2;    // Smoothly drifts: 1011.1 - 1013.5 hPa
 
-  // Safeguard against NaN in case of sensor glitch
-  if (isnan(tempC)) tempC = 0.0;
-  if (isnan(humidityPct)) humidityPct = 0.0;
-  if (isnan(pressureHPa)) pressureHPa = 0.0;
+  // 4. Simulated MPU6050 (Dynamic slope movement)
+  // Tilt X and Tilt Y oscillate smoothly so the dot glides across the dashboard radar
+  float tiltX = sin(t * 0.8) * 6.5;                   // Pitch: -6.5° to +6.5°
+  float tiltY = cos(t * 0.6) * 5.0;                   // Roll: -5.0° to +5.0°
 
-  // 4. Read MPU6050 Data
-  sensors_event_t accel, gyro, mpuTemp;
-  mpu.getEvent(&accel, &gyro, &mpuTemp);
-  String orientation = getOrientation(
-      accel.acceleration.x, accel.acceleration.y, accel.acceleration.z);
+  // Format orientation with live angles for the dashboard reticle
+  String orientation = "Tilt X:" + String(tiltX, 2) + " Y:" + String(tiltY, 2);
+  if (abs(tiltX) < 1.5 && abs(tiltY) < 1.5) {
+    orientation += " (Flat)";
+  }
 
   // 5. Construct CSV Payload String
   // Format:

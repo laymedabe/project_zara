@@ -131,6 +131,9 @@ def validate_reading(reading: dict) -> tuple[bool, list[str]]:
                     )
         else:
             value = reading.get(field)
+            # Allow 0 for environmental sensors if sensor is offline/not yet detected
+            if field in ("pressure", "temperature", "humidity") and (value is None or value == 0):
+                continue
             if value is not None and not (low <= value <= high):
                 issues.append(
                     f"{field}={value:.2f} out of range [{low}, {high}]"
